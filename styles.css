@@ -1,0 +1,160 @@
+/* ==========================================================================
+   LumiTrack Smart Lamp & Ambience IoT Dashboard - Warm Palette Styles
+   ========================================================================== */
+
+/* Custom Scrollbar for Terminal & Tables */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #141210;
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #44372D;
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #F59E0B;
+}
+
+/* Realistic Warm Lamp Visualizer Styles */
+#lampBulbBody {
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lamp-on #lampBulbBody {
+  background: radial-gradient(circle at 50% 40%, #FFFBEB 0%, #FDE68A 35%, #F59E0B 75%, #D97706 100%);
+  box-shadow: 
+    0 0 25px rgba(251, 191, 36, 0.8),
+    0 0 60px rgba(245, 158, 11, 0.6),
+    0 0 120px rgba(217, 119, 6, 0.4),
+    inset 0 -8px 20px rgba(245, 158, 11, 0.6);
+  border-color: #FEF3C7;
+  transform: scale(1.02);
+}
+
+.lamp-off #lampBulbBody {
+  background: radial-gradient(circle at 50% 40%, #292524 0%, #1C1917 80%, #0C0A09 100%);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.05);
+  border-color: #44403C;
+  transform: scale(0.98);
+}
+
+.lamp-on #filament i {
+  color: #B45309;
+  filter: drop-shadow(0 0 8px #F59E0B);
+  animation: filamentGlow 2.5s ease-in-out infinite alternate;
+}
+
+.lamp-off #filament i {
+  color: #57534E;
+  filter: none;
+}
+
+.lamp-off #lampAmbientGlow {
+  opacity: 0;
+  transform: scale(0.6) translate(-50%, -50%);
+}
+
+.lamp-on #lampAmbientGlow {
+  opacity: 1;
+  transform: scale(1) translate(-50%, -50%);
+}
+
+.lamp-off #lampReflection {
+  opacity: 0.1;
+  background: #292524;
+}
+
+.lamp-on #lampReflection {
+  opacity: 0.7;
+  background: radial-gradient(ellipse at center, rgba(245, 158, 11, 0.8) 0%, rgba(217, 119, 6, 0.3) 60%, transparent 100%);
+}
+
+@keyframes filamentGlow {
+  0% {
+    filter: drop-shadow(0 0 6px #F59E0B) brightness(1);
+  }
+  100% {
+    filter: drop-shadow(0 0 14px #FBBF24) brightness(1.25);
+  }
+}
+
+/* Light Mode Overrides for Warm Cozy Vibe */
+body.light-mode {
+  background-color: #FAF5EE !important;
+  color: #2D241E !important;
+}
+
+body.light-mode header {
+  background-color: rgba(250, 245, 238, 0.85) !important;
+  border-color: #E8DED3 !important;
+}
+
+body.light-mode header h1 {
+  color: #261B11 !important;
+}
+
+body.light-mode .bg-\[\#1D1916\] {
+  background-color: #FFFFFF !important;
+  border-color: #EBDDCC !important;
+  box-shadow: 0 10px 25px -5px rgba(180, 115, 60, 0.08) !important;
+}
+
+body.light-mode .bg-\[\#161311\],
+body.light-mode .bg-\[\#171412\],
+body.light-mode .bg-\[\#141210\] {
+  background-color: #F8F1E7 !important;
+  border-color: #E5D5C2 !important;
+}
+
+body.light-mode .text-white {
+  color: #2B1D12 !important;
+}
+
+body.light-mode .text-stone-300,
+body.light-mode .text-stone-400 {
+  color: #6B5B4E !important;
+}
+
+body.light-mode #terminalLogs {
+  background-color: #12100E;
+  color: #E2D9D0;
+}
+
+/* Custom fade animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Range input thumb styling in warm amber */
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 18px;
+  width: 18px;
+  border-radius: 50%;
+  background: #F59E0B;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+  cursor: pointer;
+  border: 2px solid #FFFBEB;
+}
+
+input[type=range]::-moz-range-thumb {
+  height: 18px;
+  width: 18px;
+  border-radius: 50%;
+  background: #F59E0B;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+  cursor: pointer;
+  border: 2px solid #FFFBEB;
+}

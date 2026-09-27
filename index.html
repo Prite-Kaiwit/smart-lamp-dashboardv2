@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Lamp & Ambience IoT Dashboard | ระบบไฟอัจฉริยะ</title>
+  
+  <!-- Google Fonts: Prompt & Kanit & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            warm: {
+              50: '#FDF8F3',
+              100: '#FBF0E6',
+              200: '#F6DEC8',
+              300: '#ECC4A1',
+              400: '#E0A374',
+              500: '#D5824C',
+              600: '#C26535',
+              700: '#9F4D28',
+              800: '#7F3E24',
+              900: '#673420',
+              950: '#37180D',
+            },
+            amber: {
+              450: '#F59E0B',
+              550: '#D97706',
+            },
+            surface: {
+              dark: '#141210',
+              card: '#1D1916',
+              cardHover: '#26211C',
+              border: '#3D342C',
+              lightBg: '#FAF6F0',
+              lightCard: '#FFFFFF',
+              lightBorder: '#E8DED1',
+            }
+          },
+          fontFamily: {
+            sans: ['Prompt', 'Sarabun', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          boxShadow: {
+            'warm-glow': '0 0 50px -5px rgba(245, 158, 11, 0.45)',
+            'warm-glow-lg': '0 0 90px 10px rgba(245, 158, 11, 0.55)',
+            'warm-card': '0 10px 30px -10px rgba(45, 26, 12, 0.3)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-[#141210] text-[#F5EDE4] min-h-screen font-sans transition-colors duration-300 antialiased selection:bg-amber-500 selection:text-black">
+
+  <!-- TOP NOTIFICATION BANNER -->
+  <div id="alertBanner" class="hidden bg-gradient-to-r from-amber-900/90 to-orange-950/90 border-b border-amber-600/40 text-amber-200 px-4 py-2.5 text-xs md:text-sm flex items-center justify-between transition-all duration-300">
+    <div class="flex items-center space-x-2 max-w-5xl mx-auto w-full justify-between">
+      <div class="flex items-center space-x-2">
+        <i data-lucide="bell-ring" class="w-4 h-4 text-amber-400 animate-bounce"></i>
+        <span id="alertBannerText" class="font-medium">แจ้งเตือนระบบ: สภาพแวดล้อมปกติ</span>
+      </div>
+      <button onclick="dismissAlert()" class="text-amber-400 hover:text-amber-100 transition p-1">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- NAVIGATION HEADER -->
+  <header class="sticky top-0 z-40 backdrop-blur-md bg-[#141210]/85 border-b border-[#2C241E]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+      
+      <!-- Brand Logo & Title -->
+      <div class="flex items-center space-x-3.5">
+        <div class="relative flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 shadow-warm-glow shadow-amber-500/20 text-white font-bold">
+          <i data-lucide="lightbulb" class="w-6 h-6 text-amber-100 fill-amber-200/40 animate-pulse"></i>
+          <span class="absolute -top-1 -right-1 flex h-3 w-3">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+          </span>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-lg md:text-xl font-bold tracking-tight text-white flex items-center gap-2">
+              LumiTrack <span class="text-amber-400 font-light text-sm px-2 py-0.5 rounded-md bg-amber-950/60 border border-amber-600/40">IoT v1.0</span>
+            </h1>
+          </div>
+          <p class="text-xs text-[#A89A8E] flex items-center gap-1.5 mt-0.5">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span>ESP32 Node: <strong class="text-amber-300/90 font-mono">192.168.1.105</strong></span>
+            <span class="text-stone-600">•</span>
+            <span id="headerSyncTime" class="font-mono text-stone-400">อัปเดต: 13:19:08</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Action Buttons & Controls -->
+      <div class="flex items-center space-x-2 md:space-x-3">
+        
+        <!-- Direct USB Serial Button -->
+        <button id="btnConnectSerial" onclick="connectWebSerial()" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-600/50 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 transition shadow-sm" title="เชื่อมต่อตรงผ่านสาย USB Serial COM Port">
+          <i data-lucide="usb" class="w-3.5 h-3.5"></i>
+          <span id="serialBtnText">ต่อสาย USB ตรง</span>
+        </button>
+
+        <!-- Live Simulation Stream Toggle -->
+        <button id="toggleSimBtn" onclick="toggleSimulation()" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-medium border border-amber-600/40 bg-amber-950/40 hover:bg-amber-900/50 text-amber-300 transition shadow-sm" title="สลับโหมดจำลองข้อมูลเซ็นเซอร์อัตโนมัติ">
+          <span id="simDot" class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+          <span id="simBtnText">ดึงข้อมูลสด</span>
+        </button>
+
+        <!-- MongoDB Status Badge / Modal Trigger -->
+        <button onclick="openMongoModal()" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[#3E332A] bg-[#221C17] hover:bg-[#2C241E] text-stone-300 transition" title="ตั้งค่าเชื่อมต่อ MongoDB">
+          <i data-lucide="database" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>MongoDB: <span id="mongoStatusText" class="text-amber-400">โหมดพร้อมเชื่อมต่อ</span></span>
+        </button>
+
+        <!-- Theme Color Mode Toggle -->
+        <button onclick="toggleWarmTheme()" class="p-2 rounded-lg border border-[#3E332A] bg-[#221C17] hover:bg-[#2C241E] text-amber-300 transition" title="สลับธีมโทนอุ่น มืด/สว่าง">
+          <i id="themeIcon" data-lucide="moon" class="w-4 h-4"></i>
+        </button>
+
+        <!-- Manual Refresh Button -->
+        <button onclick="manualRefresh()" class="p-2 rounded-lg border border-[#3E332A] bg-[#221C17] hover:bg-[#2C241E] text-stone-300 transition hover:text-white" title="รีเฟรชข้อมูล">
+          <i id="refreshIcon" data-lucide="refresh-cw" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- HERO STATUS BAR -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      
+      <!-- Current Mode Card -->
+      <div class="bg-[#1D1916] border border-[#3A2F25] rounded-2xl p-4 flex items-center justify-between shadow-sm relative overflow-hidden group hover:border-amber-600/50 transition">
+        <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-amber-500/5 rounded-full blur-xl pointer-events-none"></div>
+        <div>
+          <span class="text-xs uppercase tracking-wider text-[#9E8E80] font-medium">โหมดการทำงาน (Mode)</span>
+          <div class="flex items-center gap-2 mt-1">
+            <span id="heroModeBadge" class="text-lg md:text-xl font-bold text-amber-400 font-mono tracking-wide">
+              FORCE ON
+            </span>
+          </div>
+          <span class="text-[11px] text-stone-400">เปิดหลอดไฟตลอดเวลา</span>
+        </div>
+        <div class="p-3 bg-amber-950/60 border border-amber-600/30 rounded-xl text-amber-400">
+          <i data-lucide="zap" class="w-6 h-6"></i>
+        </div>
+      </div>
+
+      <!-- Lamp State Card -->
+      <div class="bg-[#1D1916] border border-[#3A2F25] rounded-2xl p-4 flex items-center justify-between shadow-sm relative overflow-hidden group hover:border-amber-600/50 transition">
+        <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-amber-500/10 rounded-full blur-xl pointer-events-none"></div>
+        <div>
+          <span class="text-xs uppercase tracking-wider text-[#9E8E80] font-medium">สถานะหลอดไฟ (Lamp)</span>
+          <div class="flex items-center gap-2 mt-1">
+            <span id="heroLampStatus" class="text-lg md:text-xl font-bold text-emerald-400 font-mono">
+              ON (เปิด)
+            </span>
+          </div>
+          <span id="heroLampDetails" class="text-[11px] text-stone-400">สว่างเต็มประสิทธิภาพ 100%</span>
+        </div>
+        <div id="heroLampIconWrap" class="p-3 bg-emerald-950/60 border border-emerald-600/30 rounded-xl text-emerald-400 shadow-warm-glow">
+          <i data-lucide="sun" class="w-6 h-6"></i>
+        </div>
+      </div>
+
+      <!-- Ambient Light State Card -->
+      <div class="bg-[#1D1916] border border-[#3A2F25] rounded-2xl p-4 flex items-center justify-between shadow-sm relative overflow-hidden group hover:border-amber-600/50 transition">
+        <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-amber-500/5 rounded-full blur-xl pointer-events-none"></div>
+        <div>
+          <span class="text-xs uppercase tracking-wider text-[#9E8E80] font-medium">สภาพแสงแวดล้อม (Light)</span>
+          <div class="flex items-center gap-2 mt-1">
+            <span id="heroLightStatus" class="text-lg md:text-xl font-bold text-amber-400 font-mono">
+              DARK (มืด)
+            </span>
+          </div>
+          <span id="heroLightLevel" class="text-[11px] text-stone-400">ระดับแสง 21 / 100 (ดิบ: 3149)</span>
+        </div>
+        <div class="p-3 bg-amber-950/60 border border-amber-700/30 rounded-xl text-amber-400">
+          <i data-lucide="moon" class="w-6 h-6"></i>
+        </div>
+      </div>
+
+      <!-- Occupancy / People Card -->
+      <div class="bg-[#1D1916] border border-[#3A2F25] rounded-2xl p-4 flex items-center justify-between shadow-sm relative overflow-hidden group hover:border-amber-600/50 transition">
+        <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-amber-500/5 rounded-full blur-xl pointer-events-none"></div>
+        <div>
+          <span class="text-xs uppercase tracking-wider text-[#9E8E80] font-medium">การตรวจจับคน (People)</span>
+          <div class="flex items-center gap-2 mt-1">
+            <span id="heroPeopleStatus" class="text-lg md:text-xl font-bold text-orange-400 font-mono">
+              YES (มีคน)
+            </span>
+          </div>
+          <span id="heroPeopleDist" class="text-[11px] text-stone-400">สถานะ: <strong class="text-emerald-400">ตรวจพบคน (DETECTED)</strong></span>
+        </div>
+        <div class="p-3 bg-orange-950/60 border border-orange-600/30 rounded-xl text-orange-400">
+          <i data-lucide="user-check" class="w-6 h-6"></i>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- MAIN GRID: INTERACTIVE CONTROLS + TELEMETRY GAUGES -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- COLUMN 1: SMART LAMP CONTROLLER (HERO INTERACTION) -->
+      <div class="bg-[#1D1916] border border-[#3A2F25] rounded-3xl p-6 shadow-warm-card flex flex-col justify-between relative overflow-hidden">
+        
+        <!-- Background Ambient Glow behind bulb -->
+        <div id="lampAmbientGlow" class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-amber-500/25 rounded-full blur-3xl pointer-events-none transition-all duration-700"></div>
+
+        <div>
+          <!-- Card Header -->
+          <div class="flex items-center justify-between border-b border-[#31271F] pb-4">
+            <div class="flex items-center space-x-2.5">
+              <div class="p-2 rounded-lg bg-amber-950/70 border border-amber-600/30 text-amber-400">
+                <i data-lucide="sliders" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h3 class="font-semibold text-base text-white">แผงควบคุมไฟอัจฉริยะ</h3>
+                <p class="text-xs text-[#9E8E80]">ควบคุม Relay / หลอดไฟ & โหมด</p>
+              </div>
+            </div>
+            <span id="lampBadgeStatus" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-600/40">
+              กำลังสว่าง (ON)
+            </span>
+          </div>
+
+          <!-- Realistic Warm Lamp Visualizer -->
+          <div class="py-8 flex flex-col items-center justify-center">
+            <div class="relative cursor-pointer group" onclick="toggleLampManual()">
+              <!-- Hanging Wire -->
+              <div class="w-1 h-10 bg-gradient-to-b from-stone-600 to-amber-700 mx-auto -mt-4 mb-0 rounded-full"></div>
+              
+              <!-- Lamp Socket / Cap -->
+              <div class="w-14 h-4 bg-gradient-to-r from-stone-700 via-amber-800 to-stone-700 mx-auto rounded-t-lg border-t border-amber-600/50"></div>
+              
+              <!-- Bulb Glass Body -->
+              <div id="lampBulbBody" class="w-32 h-32 rounded-full relative flex items-center justify-center transition-all duration-500 bg-gradient-to-b from-amber-400 via-amber-300 to-yellow-100 shadow-warm-glow-lg border-2 border-amber-300">
+                <!-- Filament glow -->
+                <div id="filament" class="w-12 h-12 rounded-full border-2 border-amber-600 flex items-center justify-center transition-all duration-300">
+                  <i data-lucide="lightbulb" class="w-14 h-14 text-amber-800 fill-amber-300"></i>
+                </div>
+              </div>
+
+              <!-- Floor / Table reflection glow -->
+              <div id="lampReflection" class="w-40 h-4 bg-amber-500/40 blur-md rounded-full mx-auto mt-4 transition-all duration-500"></div>
+            </div>
+
+            <div class="mt-4 text-center">
+              <span id="lampPowerText" class="text-sm font-medium text-amber-200">หลอดไฟเปิดทำงาน (Warm White 2700K)</span>
+              <p class="text-xs text-stone-400 mt-0.5">คลิกที่รูปหลอดไฟเพื่อสลับ เปิด/ปิด ได้ทันที</p>
+            </div>
+          </div>
+
+          <!-- Quick Toggle Switch & Brightness Slider -->
+          <div class="space-y-4 bg-[#161311] p-4 rounded-2xl border border-[#2F251E]">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-stone-200 flex items-center gap-2">
+                <i data-lucide="power" class="w-4 h-4 text-amber-400"></i> สวิตช์ไฟหลัก
+              </span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="lampToggleSwitch" checked onchange="handleLampSwitch(this.checked)" class="sr-only peer">
+                <div class="w-13 h-7 bg-stone-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-amber-500 peer-checked:to-orange-500 shadow-inner"></div>
+              </label>
+            </div>
+
+            <!-- Dimmer slider -->
+            <div class="space-y-1.5 pt-2 border-t border-[#2B221B]">
+              <div class="flex justify-between text-xs">
+                <span class="text-stone-400 flex items-center gap-1.5">
+                  <i data-lucide="sun-medium" class="w-3.5 h-3.5 text-amber-400"></i> ความสว่าง (PWM Dimmer)
+                </span>
+                <span id="brightnessValue" class="font-mono text-amber-300 font-bold">100%</span>
+              </div>
+              <input type="range" id="brightnessSlider" min="10" max="100" value="100" oninput="changeBrightness(this.value)" class="w-full accent-amber-500 bg-stone-800 rounded-lg cursor-pointer">
+            </div>
+          </div>
+
+          <!-- Mode Selectors (FORCE ON, AUTO, FORCE OFF) -->
+          <div class="mt-4 space-y-2">
+            <label class="text-xs uppercase tracking-wider text-[#9E8E80] font-medium block">
+              เลือกโหมดการควบคุม (Operating Mode)
+            </label>
+            <div class="grid grid-cols-3 gap-2">
+              <button onclick="setMode('FORCE ON')" id="btnModeForceOn" class="py-2.5 px-2 rounded-xl text-xs font-semibold flex flex-col items-center justify-center gap-1 transition border bg-amber-500/20 border-amber-500 text-amber-300 shadow-sm">
+                <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                <span>FORCE ON</span>
+                <span class="text-[9px] opacity-75 font-normal">เปิดตลอด</span>
+              </button>
+
+              <button onclick="setMode('AUTO')" id="btnModeAuto" class="py-2.5 px-2 rounded-xl text-xs font-semibold flex flex-col items-center justify-center gap-1 transition border border-[#3A2F25] bg-[#171412] hover:bg-[#261F18] text-stone-400">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                <span>AUTO</span>
+                <span class="text-[9px] opacity-75 font-normal">ตามแสง/คน</span>
+              </button>
+
+              <button onclick="setMode('FORCE OFF')" id="btnModeForceOff" class="py-2.5 px-2 rounded-xl text-xs font-semibold flex flex-col items-center justify-center gap-1 transition border border-[#3A2F25] bg-[#171412] hover:bg-[#261F18] text-stone-400">
+                <i data-lucide="power-off" class="w-3.5 h-3.5"></i>
+                <span>FORCE OFF</span>
+                <span class="text-[9px] opacity-75 font-normal">ปิดตลอด</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Automation Rule description box -->
+        <div class="mt-4 p-3 bg-amber-950/30 rounded-xl border border-amber-900/40 text-xs text-amber-300/90 flex items-start gap-2">
+          <i data-lucide="info" class="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5"></i>
+          <div>
+            <span class="font-medium text-amber-300">เงื่อนไขโหมด AUTO ปัจจุบัน:</span>
+            <p class="text-[11px] text-stone-400 mt-0.5 leading-relaxed">
+              หากแสงต่ำกว่า <strong class="text-amber-300">30%</strong> และมีคนอยู่ (<strong class="text-amber-300">&lt; 150 cm</strong>) หลอดไฟจะเปิดทำงานอัตโนมัติ
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- COLUMN 2: SENSOR GAUGES & METRICS (Temp, Humidity, People, Light) -->
+      <div class="space-y-6">
+        
+        <!-- CARD: TEMPERATURE & HUMIDITY (DHT22) -->
+        <div class="bg-[#1D1916] border border-[#3A2F25] rounded-3xl p-5 shadow-warm-card relative overflow-hidden">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center space-x-2">
+              <div class="p-2 rounded-lg bg-orange-950/60 border border-orange-600/30 text-orange-400">
+                <i data-lucide="thermometer-snowflake" class="w-4 h-4"></i>
+              </div>
+              <h3 class="font-semibold text-white text-sm">สภาพอากาศ & อุณหภูมิ (Climate)</h3>
+            </div>
+            <span class="text-xs text-[#9E8E80] font-mono">เซ็นเซอร์ DHT22</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            
+            <!-- Temperature -->
+            <div class="bg-[#161311] border border-[#2D231B] rounded-2xl p-4 flex flex-col justify-between relative group hover:border-amber-600/40 transition">
+              <div class="flex items-center justify-between text-xs text-stone-400">
+                <span>อุณหภูมิ (Temp)</span>
+                <i data-lucide="flame" class="w-4 h-4 text-orange-400"></i>
+              </div>
+              <div class="my-2">
+                <div class="flex items-baseline space-x-1">
+                  <span id="valTemperature" class="text-3xl font-extrabold text-amber-300 font-mono tracking-tight">24.2</span>
+                  <span class="text-lg font-semibold text-stone-400">°C</span>
+                </div>
+                <div class="text-[11px] text-emerald-400 flex items-center gap-1 mt-1">
+                  <i data-lucide="check-circle-2" class="w-3 h-3"></i>
+                  <span>อยู่ในเกณฑ์เย็นสบาย</span>
+                </div>
+              </div>
+              <!-- Mini Bar Gauge -->
+              <div class="w-full bg-stone-800 h-1.5 rounded-full overflow-hidden">
+                <div id="barTemp" class="bg-gradient-to-r from-sky-400 via-amber-400 to-rose-500 h-full rounded-full transition-all duration-500" style="width: 48%;"></div>
+              </div>
+            </div>
+
+            <!-- Humidity -->
+            <div class="bg-[#161311] border border-[#2D231B] rounded-2xl p-4 flex flex-col justify-between relative group hover:border-amber-600/40 transition">
+              <div class="flex items-center justify-between text-xs text-stone-400">
+                <span>ความชื้น (Humidity)</span>
+                <i data-lucide="droplets" class="w-4 h-4 text-amber-400"></i>
+              </div>
+              <div class="my-2">
+                <div class="flex items-baseline space-x-1">
+                  <span id="valHumidity" class="text-3xl font-extrabold text-amber-200 font-mono tracking-tight">70.2</span>
+                  <span class="text-lg font-semibold text-stone-400">%</span>
+                </div>
+                <div class="text-[11px] text-amber-400/90 flex items-center gap-1 mt-1">
+                  <i data-lucide="alert-circle" class="w-3 h-3"></i>
+                  <span>ความชื้นค่อนข้างสูง</span>
+                </div>
+              </div>
+              <!-- Mini Bar Gauge -->
+              <div class="w-full bg-stone-800 h-1.5 rounded-full overflow-hidden">
+                <div id="barHumidity" class="bg-gradient-to-r from-amber-400 to-amber-600 h-full rounded-full transition-all duration-500" style="width: 70.2%;"></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- CARD: LIGHT SENSOR (LDR / ADC) -->
+        <div class="bg-[#1D1916] border border-[#3A2F25] rounded-3xl p-5 shadow-warm-card">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center space-x-2">
+              <div class="p-2 rounded-lg bg-amber-950/60 border border-amber-600/30 text-amber-400">
+                <i data-lucide="sun" class="w-4 h-4"></i>
+              </div>
+              <h3 class="font-semibold text-white text-sm">ระดับแสงแวดล้อม (Light Sensor)</h3>
+            </div>
+            <span id="lightBadgeStatus" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-stone-800 text-amber-300 border border-amber-700/40">
+              DARK (มืด)
+            </span>
+          </div>
+
+          <div class="bg-[#161311] border border-[#2D231B] rounded-2xl p-4 space-y-4">
+            <!-- Numbers Row -->
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <span class="text-xs text-stone-400">Light Level (เปอร์เซ็นต์)</span>
+                <div class="flex items-baseline space-x-1 mt-1">
+                  <span id="valLightLevel" class="text-3xl font-extrabold text-amber-400 font-mono">21</span>
+                  <span class="text-base text-stone-400 font-mono">/ 100</span>
+                </div>
+              </div>
+              <div>
+                <span class="text-xs text-stone-400">Light Raw (ค่าดิบ ADC)</span>
+                <div class="flex items-baseline space-x-1 mt-1">
+                  <span id="valLightRaw" class="text-2xl font-bold text-amber-200 font-mono">3149</span>
+                  <span class="text-xs text-stone-500 font-mono">/ 4095</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Progress Visualizer with Labels -->
+            <div class="space-y-1.5">
+              <div class="w-full bg-stone-800 h-3 rounded-full overflow-hidden p-0.5 border border-[#332920]">
+                <div id="barLightLevel" class="bg-gradient-to-r from-stone-600 via-amber-600 to-amber-400 h-full rounded-full transition-all duration-500" style="width: 21%;"></div>
+              </div>
+              <div class="flex justify-between text-[10px] text-stone-500 font-mono px-1">
+                <span class="text-amber-400">0% (มืดสนิท)</span>
+                <span>50% (แสงพอดี)</span>
+                <span>100% (สว่างจ้า)</span>
+              </div>
+            </div>
+
+            <!-- Threshold hint -->
+            <div class="text-[11px] text-stone-400 flex items-center justify-between border-t border-[#292019] pt-2.5">
+              <span>เกณฑ์เปิดไฟอัตโนมัติ:</span>
+              <span class="font-mono text-amber-300">&lt; 30% (มืดเข้าเกณฑ์)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD: PEOPLE DETECTION (Proximity Sensor) -->
+        <div class="bg-[#1D1916] border border-[#3A2F25] rounded-3xl p-5 shadow-warm-card">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center space-x-2">
+              <div class="p-2 rounded-lg bg-orange-950/60 border border-orange-600/30 text-orange-400">
+                <i data-lucide="radar" class="w-4 h-4"></i>
+              </div>
+              <h3 class="font-semibold text-white text-sm">การตรวจจับคน (Proximity Sensor)</h3>
+            </div>
+            <span id="peopleBadge" class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-600/40">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              YES (ตรวจพบคน)
+            </span>
+          </div>
+
+          <div class="bg-[#161311] border border-[#2D231B] rounded-2xl p-4 flex items-center justify-between">
+            <div class="space-y-1">
+              <span class="text-xs text-stone-400">สถานะเซ็นเซอร์ (Detection Status)</span>
+              <div class="flex items-baseline space-x-2">
+                <span id="valProximityStatus" class="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono">DETECTED</span>
+              </div>
+              <span id="distDescription" class="inline-block text-[11px] text-orange-400 font-medium">
+                เซ็นเซอร์ Proximity ยืนยันพบคนในพื้นที่
+              </span>
+            </div>
+
+            <!-- Radar / Proximity Visual Ring Animation -->
+            <div class="relative w-20 h-20 flex items-center justify-center">
+              <div id="radarRing3" class="absolute inset-0 rounded-full border border-amber-500/20 animate-ping"></div>
+              <div id="radarRing2" class="absolute inset-2 rounded-full border border-amber-500/40"></div>
+              <div id="proximityIconWrap" class="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-warm-glow">
+                <i data-lucide="user" class="w-5 h-5"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- COLUMN 3: REAL-TIME SERIAL MONITOR (EXACT REPLICA OF THE SCREENSHOT) -->
+      <div class="bg-[#1D1916] border border-[#3A2F25] rounded-3xl p-5 shadow-warm-card flex flex-col justify-between space-y-4">
+        
+        <div>
+          <!-- Header of Serial Monitor -->
+          <div class="flex items-center justify-between border-b border-[#31271F] pb-3">
+            <div class="flex items-center space-x-2">
+              <div class="p-1.5 rounded-lg bg-stone-800 text-stone-300 border border-stone-700">
+                <i data-lucide="terminal" class="w-4 h-4 text-amber-400"></i>
+              </div>
+              <div>
+                <h3 class="font-semibold text-white text-sm">Serial Monitor Console</h3>
+                <p class="text-[11px] text-stone-400">เหมือนหน้าจอ Arduino IDE ในรูปภาพ 100%</p>
+              </div>
+            </div>
+
+            <!-- Controls: Autoscroll, Clear, Copy -->
+            <div class="flex items-center space-x-1.5">
+              <button onclick="clearTerminal()" class="p-1.5 rounded hover:bg-stone-800 text-stone-400 hover:text-white transition" title="ล้างหน้าจอ">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+              <button onclick="copyTerminal()" class="p-1.5 rounded hover:bg-stone-800 text-stone-400 hover:text-white transition" title="คัดลอก Logs">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+              </button>
+              <button id="btnAutoScroll" onclick="toggleAutoScroll()" class="p-1.5 rounded bg-amber-950/70 text-amber-400 border border-amber-700/50 hover:bg-amber-900 transition" title="เลื่อนลงล่างสุดอัตโนมัติ">
+                <i data-lucide="arrow-down-circle" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Raw Console Window -->
+          <div class="mt-3 bg-[#0E1318] border border-[#202933] rounded-2xl p-3.5 font-mono text-xs overflow-hidden shadow-inner flex flex-col h-[380px]">
+            <!-- Terminal Header Bar -->
+            <div class="flex items-center justify-between text-[11px] text-stone-400 pb-2 border-b border-stone-800/80 mb-2">
+              <span class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> COM4 (115200 baud)
+              </span>
+              <span class="text-stone-500">Timestamp -> Payload</span>
+            </div>
+
+            <!-- Scrollable Log Container -->
+            <div id="terminalLogs" class="flex-1 overflow-y-auto space-y-0.5 text-stone-300 pr-1 select-text scrollbar-thin">
+              <!-- Logs will be prepopulated with screenshot lines & streamed live -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Terminal Quick Action & Download -->
+        <div class="flex items-center justify-between pt-2 border-t border-[#31271F] text-xs">
+          <span class="text-stone-400 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+            บันทึกแล้ว <span id="logCount" class="font-mono text-amber-300">12</span> รายการ
+          </span>
+          <button onclick="exportLogsTxt()" class="text-amber-400 hover:text-amber-300 font-medium flex items-center gap-1">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i> ดาวน์โหลด .txt
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- CHARTS SECTION: REAL-TIME TELEMETRY HISTORY -->
+    <div class="bg-[#1D1916] border border-[#3A2F25] rounded-3xl p-6 shadow-warm-card">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#31271F]">
+        <div class="flex items-center space-x-3">
+          <div class="p-2.5 rounded-xl bg-amber-950/60 border border-amber-600/30 text-amber-400">
+            <i data-lucide="line-chart" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base text-white">กราฟแนวโน้มข้อมูลสภาพแวดล้อม (Telemetry Real-time Charts)</h3>
+            <p class="text-xs text-[#9E8E80]">ติดตามการเปลี่ยนแปลงของ อุณหภูมิ, ความชื้น และระดับแสง แบบเรียลไทม์</p>
+          </div>
+        </div>
+
+        <!-- Chart Type Switcher -->
+        <div class="flex items-center space-x-2 bg-[#161311] p-1 rounded-xl border border-[#2D231B] text-xs">
+          <button onclick="switchChartTab('all')" id="tabBtnAll" class="px-3 py-1.5 rounded-lg bg-amber-500 text-stone-950 font-semibold transition">
+            ภาพรวมทั้งหมด
+          </button>
+          <button onclick="switchChartTab('tempHum')" id="tabBtnTempHum" class="px-3 py-1.5 rounded-lg text-stone-400 hover:text-white transition">
+            อุณหภูมิ & ความชื้น
+          </button>
+          <button onclick="switchChartTab('light')" id="tabBtnLight" class="px-3 py-1.5 rounded-lg text-stone-400 hover:text-white transition">
+            ระดับแสง (Light)
+          </button>
+        </div>
+      </div>
+
+      <!-- Canvas Container -->
+      <div class="mt-6 h-72 w-full relative">
+        <canvas id="telemetryChart"></canvas>
+      </div>
+
+      <div class="mt-4 flex flex-wrap items-center justify-between text-xs text-stone-400 pt-3 border-t border-[#292019]">
+        <div class="flex items-center space-x-4">
+          <span class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-amber-400"></span> อุณหภูมิ (°C)
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-cyan-400"></span> ความชื้น (%)
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-orange-400"></span> ระดับแสง (%)
+          </span>
+        </div>
+        <span class="text-stone-500">อัปเดตทุก 2 วินาที (เก็บประวัติ 20 ค่าล่าสุด)</span>
+      </div>
+    </div>
+
+    <!-- SENSOR SIMULATOR & CONTROL DOCK (ให้ทดสอบเปลี่ยนค่าได้จริง) -->
+    <div class="bg-[#1D1916] border border-[#3A2F25] rounded-3xl p-6 shadow-warm-card">
+      <div class="flex items-center justify-between pb-4 border-b border-[#31271F]">
+        <div class="flex items-center space-x-3">
+          <div class="p-2.5 rounded-lg bg-amber-950/70 border border-amber-600/30 text-amber-400">
+            <i data-lucide="cpu" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base text-white">เครื่องมือจำลองเซ็นเซอร์สด (Live Sensor Control Bench)</h3>
+            <p class="text-xs text-[#9E8E80]">ปรับแต่งค่าเซ็นเซอร์เพื่อทดสอบการตอบสนองของระบบได้แบบเรียลไทม์</p>
+          </div>
+        </div>
+
+        <button onclick="resetToScreenshotValues()" class="text-xs text-amber-400 hover:text-amber-300 border border-amber-800/50 bg-amber-950/30 px-3 py-1.5 rounded-lg flex items-center gap-1">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> คืนค่าตามรูปภาพเป๊ะ
+        </button>
+      </div>
+
+      <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-6">
+        
+        <!-- Temp Slider Control -->
+        <div class="space-y-2 bg-[#161311] p-4 rounded-2xl border border-[#2D231B]">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-stone-300 font-medium">ปรับอุณหภูมิ (°C)</span>
+            <span id="simTempDisplay" class="font-mono text-amber-400 font-bold">24.2 °C</span>
+          </div>
+          <input type="range" id="simTempInput" min="15.0" max="42.0" step="0.1" value="24.2" oninput="updateSimValue('temp', this.value)" class="w-full accent-amber-500 bg-stone-800 rounded-lg cursor-pointer">
+          <div class="flex justify-between text-[10px] text-stone-500 font-mono">
+            <span>15°C</span>
+            <span>28°C</span>
+            <span>42°C</span>
+          </div>
+        </div>
+
+        <!-- Humidity Slider Control -->
+        <div class="space-y-2 bg-[#161311] p-4 rounded-2xl border border-[#2D231B]">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-stone-300 font-medium">ปรับความชื้น (%)</span>
+            <span id="simHumDisplay" class="font-mono text-amber-400 font-bold">70.2 %</span>
+          </div>
+          <input type="range" id="simHumInput" min="20.0" max="99.0" step="0.1" value="70.2" oninput="updateSimValue('hum', this.value)" class="w-full accent-amber-500 bg-stone-800 rounded-lg cursor-pointer">
+          <div class="flex justify-between text-[10px] text-stone-500 font-mono">
+            <span>20%</span>
+            <span>60%</span>
+            <span>99%</span>
+          </div>
+        </div>
+
+        <!-- Light Raw / Level Slider Control -->
+        <div class="space-y-2 bg-[#161311] p-4 rounded-2xl border border-[#2D231B]">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-stone-300 font-medium">ปรับแสง (ADC Raw)</span>
+            <span id="simLightDisplay" class="font-mono text-amber-400 font-bold">3149 (21%)</span>
+          </div>
+          <input type="range" id="simLightInput" min="0" max="4095" step="1" value="3149" oninput="updateSimValue('light', this.value)" class="w-full accent-amber-500 bg-stone-800 rounded-lg cursor-pointer">
+          <div class="flex justify-between text-[10px] text-stone-500 font-mono">
+            <span>0 (สว่างสุด)</span>
+            <span>2000</span>
+            <span>4095 (มืดสุด)</span>
+          </div>
+        </div>
+
+        <!-- People & Proximity Control -->
+        <div class="space-y-2 bg-[#161311] p-4 rounded-2xl border border-[#2D231B] flex flex-col justify-between">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-stone-300 font-medium">เซ็นเซอร์ตรวจจับคน (Proximity)</span>
+            <span id="simPeopleStatus" class="font-mono text-emerald-400 font-bold">DETECTED</span>
+          </div>
+          <div class="flex items-center gap-2 pt-1">
+            <button type="button" id="simPeopleBtnYes" onclick="updateSimValue('hasPeople', true)" class="flex-1 py-2 px-2.5 rounded-xl text-xs font-semibold bg-emerald-950 text-emerald-300 border border-emerald-600/40 hover:bg-emerald-900 transition flex items-center justify-center gap-1.5 shadow-sm">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> พบคน (YES)
+            </button>
+            <button type="button" id="simPeopleBtnNo" onclick="updateSimValue('hasPeople', false)" class="flex-1 py-2 px-2.5 rounded-xl text-xs font-semibold bg-stone-900 text-stone-400 border border-stone-800 hover:bg-stone-800 transition flex items-center justify-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-stone-600"></span> ไม่พบคน (NO)
+            </button>
+          </div>
+          <span class="text-[10px] text-stone-500">เซ็นเซอร์ความเคลื่อนไหว / วัตถุในระยะ</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- MONGODB INTEGRATION READY SECTION -->
+    <div class="bg-[#1D1916] border border-[#3A2F25] rounded-3xl p-6 shadow-warm-card">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#31271F]">
+        <div class="flex items-center space-x-3">
+          <div class="p-2.5 rounded-lg bg-emerald-950/70 border border-emerald-600/30 text-emerald-400">
+            <i data-lucide="database" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base text-white">MongoDB Data Pipeline & Document Schema</h3>
+            <p class="text-xs text-[#9E8E80]">โครงสร้างเอกสาร (Schema) ที่พร้อมเชื่อมต่อเข้า MongoDB ทันทีเมื่อคุณเปิดเซิร์ฟเวอร์</p>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <button onclick="toggleMongoView('table')" id="btnViewTable" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white transition">
+            ตารางข้อมูล (Live Table)
+          </button>
+          <button onclick="toggleMongoView('json')" id="btnViewJson" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#261F19] text-stone-400 hover:text-white transition">
+            JSON BSON Schema
+          </button>
+          <button onclick="openMongoModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-600/40 bg-amber-950/40 text-amber-300 hover:bg-amber-900/50 transition">
+            ดูวิธีเชื่อมต่อ Backend
+          </button>
+        </div>
+      </div>
+
+      <!-- VIEW 1: DATA TABLE -->
+      <div id="mongoTableView" class="mt-4 overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-[#161311] text-stone-400 border-b border-[#2C231B] uppercase font-mono">
+            <tr>
+              <th class="py-3 px-4">_id (ObjectId)</th>
+              <th class="py-3 px-4">Timestamp</th>
+              <th class="py-3 px-4">Temp (°C)</th>
+              <th class="py-3 px-4">Humidity (%)</th>
+              <th class="py-3 px-4">People (Proximity)</th>
+              <th class="py-3 px-4">Light Level</th>
+              <th class="py-3 px-4">Light Status</th>
+              <th class="py-3 px-4">Lamp Status</th>
+              <th class="py-3 px-4">Mode</th>
+            </tr>
+          </thead>
+          <tbody id="mongoTableBody" class="divide-y divide-[#2C231B] font-mono text-stone-300">
+            <!-- Dynamically populated from latest states -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- VIEW 2: JSON DOCUMENT SCHEMA -->
+      <div id="mongoJsonView" class="hidden mt-4 bg-[#0F0D0C] border border-[#2A211A] rounded-2xl p-4 font-mono text-xs text-amber-200/90 overflow-x-auto">
+        <pre id="mongoJsonCode"></pre>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-[#292019] mt-12 py-6 text-center text-xs text-[#8A7B6E]">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <p>© 2026 LumiTrack IoT System • พัฒนาระบบแสดงผลแดชบอร์ดตามบันทึกฮาร์ดแวร์จริง</p>
+      <div class="flex items-center space-x-3 text-stone-400">
+        <span>Arduino / ESP32</span>
+        <span>•</span>
+        <span>Node.js / Express</span>
+        <span>•</span>
+        <span>MongoDB</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- MONGODB CONFIG / BACKEND GUIDE MODAL -->
+  <div id="mongoModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+    <div class="bg-[#1D1916] border border-amber-600/40 rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative text-left">
+      <button onclick="closeMongoModal()" class="absolute top-5 right-5 text-stone-400 hover:text-white p-1 rounded-lg">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <div class="flex items-center space-x-3 mb-4">
+        <div class="p-2.5 rounded-xl bg-emerald-950/70 border border-emerald-600/30 text-emerald-400">
+          <i data-lucide="database" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-white">การเชื่อมต่อ MongoDB & Backend</h3>
+          <p class="text-xs text-stone-400">โครงสร้างไฟล์และคำสั่งเปิดใช้งานเซิร์ฟเวอร์ฐานข้อมูล</p>
+        </div>
+      </div>
+
+      <div class="space-y-4 text-xs text-stone-300">
+        <div class="bg-[#141210] p-4 rounded-2xl border border-[#2D231B] space-y-2">
+          <span class="font-semibold text-emerald-400 block text-sm">1. สถานะการเชื่อมต่อ MongoDB Atlas:</span>
+          <p class="text-stone-300">ตั้งค่า Connection String ในไฟล์ <code class="text-amber-300 font-mono">.env</code> เรียบร้อยแล้ว พร้อมระบบ Auto-Reconnect</p>
+          <ul class="list-disc list-inside space-y-1 text-stone-400 font-mono text-[11px]">
+            <li><strong class="text-white">server.js</strong> : Backend API + บันทึกข้อมูลลง MongoDB Atlas</li>
+            <li><strong class="text-white">models/SensorLog.js</strong> : Schema เก็บข้อมูล (ตรวจจับคน Proximity: YES/NO)</li>
+            <li><strong class="text-white">POST /api/sensors/data</strong> : Endpoint สำหรับฮาร์ดแวร์ ESP32 หรือแดชบอร์ด</li>
+            <li><strong class="text-white">GET /api/sensors/history</strong> : ดึงประวัติข้อมูลย้อนหลังจาก MongoDB Atlas</li>
+          </ul>
+        </div>
+
+        <div class="bg-[#141210] p-4 rounded-2xl border border-[#2D231B] space-y-2">
+          <span class="font-semibold text-amber-400 block text-sm">2. คำสั่งรันเซิร์ฟเวอร์ & ทดสอบการเชื่อมต่อ:</span>
+          <div class="bg-black/60 p-2.5 rounded-xl font-mono text-emerald-400 text-[11px] select-all space-y-1">
+            <div># 1. ทดสอบการเชื่อมต่อ MongoDB Atlas โดยตรง:</div>
+            <div class="text-amber-300">node test_mongo.js</div>
+            <div class="pt-1"># 2. เปิดใช้งาน Backend Server (Port 5000):</div>
+            <div class="text-amber-300">node server.js</div>
+          </div>
+          <p class="text-[11px] text-stone-400">ตั้งค่า URL ของ Backend ใน <code class="text-amber-300 font-mono">config.js</code> แล้วเปิดแดชบอร์ดผ่าน Vercel เพื่อเชื่อมต่อข้อมูลสด</p>
+        </div>
+
+        <div class="flex justify-end pt-2">
+          <button onclick="closeMongoModal()" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold transition">
+            เข้าใจแล้ว
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT INCLUDES -->
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+  </script>
+</body>
+</html>
