@@ -19,7 +19,7 @@ let state = {
   mongoConnected: false
 };
 
-const BACKEND_URL = (window.APP_CONFIG?.BACKEND_URL || '').replace(/\/$/, '');
+const BACKEND_URL = (window.BACKEND_URL || '').replace(/\/$/, '');
 
 function apiUrl(path) {
   return `${BACKEND_URL}${path}`;

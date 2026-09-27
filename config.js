@@ -1,4 +1,1 @@
-// Set this to the public URL of the deployed Express backend.
-window.APP_CONFIG = {
-  BACKEND_URL: 'https://YOUR-BACKEND-DOMAIN.example.com'
-};
+window.BACKEND_URL = 'https://smart-lamp-dashboardv2.onrender.com';

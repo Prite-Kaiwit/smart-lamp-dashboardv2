@@ -1,4 +1,5 @@
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <DHT.h>
 
@@ -8,8 +9,8 @@
 const char* ssid = "test";
 const char* password = "11111110";
 
-// เปลี่ยนเป็น IP คอมของคุณ
-const char* serverUrl = "http://192.168.1.42:5000/api/sensors/data";
+// Render server (HTTPS)
+const char* serverUrl = "https://smart-lamp-dashboardv2.onrender.com/api/sensors/data";
 
 // =========================
 // DHT21
@@ -70,7 +71,7 @@ void setup() {
 
 void loop() {
 
-  // =====================ผ
+  // =====================
   // อ่านข้อมูล LD2420
   // =====================
   while (Serial2.available()) {
@@ -175,13 +176,16 @@ void loop() {
   Serial.println(lampStatus ? "ON" : "OFF");
 
   // =====================
-  // Send to Web API
+  // Send to Web API (HTTPS -> Render)
   // =====================
   if (WiFi.status() == WL_CONNECTED) {
 
+    WiFiClientSecure client;
+    client.setInsecure();
+
     HTTPClient http;
 
-    http.begin(serverUrl);
+    http.begin(client, serverUrl);
 
     http.addHeader("Content-Type", "application/json");
 
@@ -192,13 +196,24 @@ void loop() {
     json += "\"distance\":" + String(lastDistance) + ",";
     json += "\"lightRaw\":" + String(lightRaw) + ",";
     json += "\"lightLevel\":" + String(lightLevel) + ",";
-    json += "\"lampStatus\":\"" + String(lampStatus ? "ON" : "OFF") + "\"";
+    json += "\"lampStatus\":\"" + String(lampStatus ? "ON" : "OFF") + "\",";
+    json += "\"mode\":\"AUTO\"";
     json += "}";
+
+    Serial.println("Sending JSON:");
+    Serial.println(json);
 
     int httpCode = http.POST(json);
 
     Serial.print("HTTP Response : ");
     Serial.println(httpCode);
+
+    if (httpCode > 0) {
+      String response = http.getString();
+
+      Serial.println("Server Response:");
+      Serial.println(response);
+    }
 
     http.end();
   }
