@@ -12,7 +12,7 @@ let state = {
   lightStatus: null,
   lampStatus: null,
   mode: null,
-  brightness: null,
+  brightness: 100,
   autoScroll: true,
   isLiveArduino: true,
   theme: 'dark',
@@ -30,6 +30,7 @@ let terminalLines = [];
 let telemetryChartInstance = null;
 let activeChartTab = 'all';
 let syncTimer = null;
+let brightnessTimer = null;
 let isHistoryLoaded = false;
 
 // Web Serial API states (Direct USB connection)
@@ -130,6 +131,9 @@ function updateDashboard(data) {
       state.lightStatus = data.lightStatus;
       state.lampStatus = data.lampStatus;
       state.mode = data.mode;
+      if (data.brightness != null && Number.isFinite(Number(data.brightness))) {
+        state.brightness = Number(data.brightness);
+      }
       state.mongoConnected = true;
 
       // Update MongoDB connection status badge
@@ -167,11 +171,11 @@ function updateDashboard(data) {
         telemetryHistory.shift();
       }
 
-      // Append log line
-      logCurrentStateToTerminal();
-
       // Refresh UI
       updateUI();
+
+      // Append log line
+      logCurrentStateToTerminal();
       updateChartData();
       updateMongoViews();
   }
@@ -225,6 +229,11 @@ function updateUI() {
   const heroModeBadge = document.getElementById('heroModeBadge');
   if (heroModeBadge) heroModeBadge.textContent = state.mode;
   updateModeButtonsUI();
+
+  const brightnessSlider = document.getElementById('brightnessSlider');
+  if (brightnessSlider) brightnessSlider.value = state.brightness ?? 100;
+  const brightnessValue = document.getElementById('brightnessValue');
+  if (brightnessValue) brightnessValue.textContent = `${state.brightness ?? 100}%`;
 
   // Temperature
   const valTemp = document.getElementById('valTemperature');
@@ -358,38 +367,28 @@ function updateModeButtonsUI() {
 
 // Send control commands to the backend
 async function setMode(newMode) {
-  state.mode = newMode;
-  updateUI();
-
   try {
-    // Send to local backend
-    fetch(apiUrl('/api/control/mode'), {
+    const res = await fetch(apiUrl('/api/mode'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mode: newMode })
     });
-    alertBannerShow(`ส่งคำสั่งเปลี่ยนโหมดไปยังระบบสำเร็จ: ${newMode}`);
+
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Mode update failed');
+
+    console.log('Mode changed:', data.mode);
+    state.mode = data.mode;
+    updateUI();
+    alertBannerShow(`ส่งคำสั่งเปลี่ยนโหมดไปยังระบบสำเร็จ: ${data.mode}`);
   } catch (e) {
-    console.error(e);
+    console.error('Failed to set mode:', e);
+    alertBannerShow('ส่งคำสั่งเปลี่ยนโหมดไม่สำเร็จ');
   }
 }
 
 async function handleLampSwitch(isChecked) {
-  const newStatus = isChecked ? 'ON' : 'OFF';
-  state.lampStatus = newStatus;
-  state.mode = isChecked ? 'FORCE ON' : 'FORCE OFF';
-  updateUI();
-
-  try {
-    fetch(apiUrl('/api/control/lamp'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus })
-    });
-    alertBannerShow(`ส่งคำสั่งควบคุมไฟไปยังระบบสำเร็จ: ${newStatus}`);
-  } catch (e) {
-    console.error(e);
-  }
+  await setMode(isChecked ? 'FORCE ON' : 'FORCE OFF');
 }
 
 function toggleLampManual() {
@@ -400,16 +399,32 @@ function changeBrightness(value) {
   state.brightness = parseInt(value, 10);
   const elem = document.getElementById('brightnessValue');
   if (elem) elem.textContent = `${state.brightness}%`;
-  updateUI();
+
+  clearTimeout(brightnessTimer);
+  brightnessTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(apiUrl('/api/control/brightness'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brightness: state.brightness })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Brightness update failed');
+    } catch (e) {
+      console.error('Failed to set brightness:', e);
+      alertBannerShow('ส่งค่าความสว่างไม่สำเร็จ');
+    }
+  }, 250);
 }
 
 // Log formatting matching Serial Monitor format (No distance)
 function logCurrentStateToTerminal() {
   const ts = getTimestamp();
+  const fmt = (value) => (typeof value === 'number' ? value.toFixed(1) : '--');
   const lines = [
     `${ts} -> ------------------------------------`,
-    `${ts} -> Temperature : ${state.temperature.toFixed(1)} C`,
-    `${ts} -> Humidity    : ${state.humidity.toFixed(1)} %`,
+    `${ts} -> Temperature : ${fmt(state.temperature)} C`,
+    `${ts} -> Humidity    : ${fmt(state.humidity)} %`,
     `${ts} -> People      : ${state.hasPeople ? 'YES' : 'NO'}`,
     `${ts} -> Light Raw   : ${state.lightRaw}`,
     `${ts} -> Light Level : ${state.lightLevel} / 100`,
@@ -816,8 +831,7 @@ function parseSerialLine(line) {
           lightRaw: state.lightRaw,
           lightLevel: state.lightLevel,
           lightStatus: state.lightStatus,
-          lampStatus: state.lampStatus,
-          mode: state.mode
+          lampStatus: state.lampStatus
         })
       });
     } catch(e){}

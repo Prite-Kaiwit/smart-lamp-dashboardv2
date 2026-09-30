@@ -11,6 +11,7 @@ const char* password = "11111110";
 
 // Render server (HTTPS)
 const char* serverUrl = "https://smart-lamp-dashboardv2.onrender.com/api/sensors/data";
+const char* modeUrl = "https://smart-lamp-dashboardv2.onrender.com/api/mode";
 
 // =========================
 // DHT21
@@ -30,7 +31,30 @@ const char* serverUrl = "https://smart-lamp-dashboardv2.onrender.com/api/sensors
 #define LDRPIN 33
 #define LEDPIN 32
 
+// =========================
+// Mode Button
+// =========================
+#define BUTTONPIN 27          // ขาปุ่มกด (ต่อ GND อีกด้าน, ใช้ INPUT_PULLUP)
+unsigned long lastButtonPress = 0;
+const unsigned long DEBOUNCE_DELAY = 300;   // ms กันการกดซ้ำ/สั่น
+bool lastButtonState = HIGH;                // ค่าเริ่มต้นตอนไม่กด (pull-up)
+unsigned long lastModeSync = 0;
+const unsigned long MODE_SYNC_INTERVAL = 2000;
+unsigned long lastLocalModeChange = 0;
+const unsigned long MODE_SYNC_HOLDOFF = 3000;
+unsigned long lastTelemetry = 0;
+const unsigned long TELEMETRY_INTERVAL = 2000;
+unsigned long lastWifiReconnect = 0;
+const unsigned long WIFI_RECONNECT_INTERVAL = 10000;
+
+// โหมดการทำงาน: 0 = AUTO, 1 = FORCE ON, 2 = FORCE OFF
+int currentMode = 0;
+String modeNames[3] = {"AUTO", "FORCE ON", "FORCE OFF"};
+int brightnessPercent = 100;
+
 DHT dht(DHTPIN, DHTTYPE);
+float lastTemp = 0;
+float lastHum = 0;
 
 String inputString = "";
 
@@ -42,6 +66,67 @@ const unsigned long HOLD_TIME = 5000;
 
 int lastDistance = -1;
 
+int modeNameToIndex(String name) {
+  if (name == "FORCE ON") return 1;
+  if (name == "FORCE OFF") return 2;
+  return 0;
+}
+
+void setLampOutput(bool enabled) {
+  const int duty = enabled ? map(brightnessPercent, 0, 100, 0, 255) : 0;
+  analogWrite(LEDPIN, duty);
+}
+
+void fetchModeFromServer() {
+  if (WiFi.status() != WL_CONNECTED) return;
+
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+  http.begin(client, modeUrl);
+  http.setConnectTimeout(3000);
+  http.setTimeout(3000);
+
+  const int httpCode = http.GET();
+  if (httpCode == HTTP_CODE_OK) {
+    const String payload = http.getString();
+    const int marker = payload.indexOf("\"mode\":\"");
+    if (marker >= 0) {
+      const int start = marker + 8;
+      const int end = payload.indexOf('\"', start);
+      if (end > start) currentMode = modeNameToIndex(payload.substring(start, end));
+    }
+
+    const int brightnessMarker = payload.indexOf("\"brightness\":");
+    if (brightnessMarker >= 0) {
+      const int brightnessStart = brightnessMarker + 13;
+      const int serverBrightness = payload.substring(brightnessStart).toInt();
+      if (serverBrightness >= 10 && serverBrightness <= 100) {
+        brightnessPercent = serverBrightness;
+      }
+    }
+  }
+  http.end();
+}
+
+void pushModeToServer(String mode) {
+  if (WiFi.status() != WL_CONNECTED) return;
+
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+  http.begin(client, modeUrl);
+  http.setConnectTimeout(3000);
+  http.setTimeout(3000);
+  http.addHeader("Content-Type", "application/json");
+
+  const String json = "{\"mode\":\"" + mode + "\"}";
+  const int httpCode = http.POST(json);
+  Serial.print("Push Mode HTTP Code: ");
+  Serial.println(httpCode);
+  http.end();
+}
+
 void setup() {
 
   Serial.begin(115200);
@@ -49,27 +134,64 @@ void setup() {
   dht.begin();
 
   pinMode(LEDPIN, OUTPUT);
-  digitalWrite(LEDPIN, LOW);
+  analogWrite(LEDPIN, 0);
 
+  pinMode(BUTTONPIN, INPUT_PULLUP);   // ปุ่มกด ต่อขาหนึ่งลง GND
+
+  Serial2.setRxBufferSize(1024);
   Serial2.begin(115200, SERIAL_8N1, RXD2, TXD2);
 
   Serial.println("Connecting WiFi...");
 
   WiFi.begin(ssid, password);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.println();
-  Serial.print("WiFi Connected : ");
-  Serial.println(WiFi.localIP());
+  lastWifiReconnect = millis();
 
   Serial.println("System Started");
 }
 
 void loop() {
+
+  const unsigned long now = millis();
+
+  if (WiFi.status() == WL_CONNECTED) {
+    if (lastModeSync == 0) {
+      fetchModeFromServer();
+      lastModeSync = millis();
+    }
+    if (now - lastWifiReconnect >= WIFI_RECONNECT_INTERVAL) {
+      lastWifiReconnect = now;
+    }
+  }
+  else if (now - lastWifiReconnect >= WIFI_RECONNECT_INTERVAL) {
+    WiFi.reconnect();
+    lastWifiReconnect = now;
+  }
+
+  // =====================
+  // อ่านปุ่มกด (สลับโหมด)
+  // =====================
+  bool buttonState = digitalRead(BUTTONPIN);
+
+  // ตรวจจับขอบขาลง (กดปุ่ม) + debounce
+  if (buttonState == LOW && lastButtonState == HIGH &&
+      (millis() - lastButtonPress > DEBOUNCE_DELAY)) {
+
+    currentMode = (currentMode + 1) % 3;   // วน 0 -> 1 -> 2 -> 0
+    lastButtonPress = millis();
+
+    Serial.print(">>> Mode Changed To: ");
+    Serial.println(modeNames[currentMode]);
+    pushModeToServer(modeNames[currentMode]);
+    lastLocalModeChange = millis();
+  }
+
+  lastButtonState = buttonState;
+
+  if (millis() - lastLocalModeChange >= MODE_SYNC_HOLDOFF &&
+      millis() - lastModeSync >= MODE_SYNC_INTERVAL) {
+    fetchModeFromServer();
+    lastModeSync = millis();
+  }
 
   // =====================
   // อ่านข้อมูล LD2420
@@ -120,45 +242,58 @@ void loop() {
   }
 
   // =====================
-  // DHT21
-  // =====================
-  float temperature = dht.readTemperature();
-  float humidity = dht.readHumidity();
-
-  // =====================
   // LDR
   // =====================
   int lightRaw = analogRead(LDRPIN);
-
-  bool isDark = (lightRaw > 1800);
-
-  int lightLevel = map(lightRaw, 800, 3800, 100, 0);
-  lightLevel = constrain(lightLevel, 0, 100);
+  int lightLevel = constrain(map(lightRaw, 800, 3800, 100, 0), 0, 100);
+  bool isDark = (lightLevel < 30);
 
   // =====================
-  // Auto Light
+  // Lamp Logic (รองรับ 3 โหมด)
   // =====================
   bool lampStatus = false;
 
-  if (isDark && confirmedPresence) {
-    digitalWrite(LEDPIN, HIGH);
+  if (currentMode == 1) {              // FORCE ON
+    setLampOutput(true);
     lampStatus = true;
   }
-  else {
-    digitalWrite(LEDPIN, LOW);
+  else if (currentMode == 2) {         // FORCE OFF
+    setLampOutput(false);
     lampStatus = false;
   }
+  else {                               // AUTO
+    if (isDark && confirmedPresence) {
+      setLampOutput(true);
+      lampStatus = true;
+    }
+    else {
+      setLampOutput(false);
+      lampStatus = false;
+    }
+  }
+
+  if (millis() - lastTelemetry < TELEMETRY_INTERVAL) return;
+  lastTelemetry = millis();
+
+  // DHT21 reads can fail temporarily; keep the latest valid values.
+  float temperature = dht.readTemperature();
+  float humidity = dht.readHumidity();
+  if (!isnan(temperature)) lastTemp = temperature;
+  if (!isnan(humidity)) lastHum = humidity;
 
   // =====================
   // Serial Monitor
   // =====================
   Serial.println("--------------------------------");
 
+  Serial.print("Mode        : ");
+  Serial.println(modeNames[currentMode]);
+
   Serial.print("Temperature : ");
-  Serial.println(temperature);
+  Serial.println(lastTemp);
 
   Serial.print("Humidity    : ");
-  Serial.println(humidity);
+  Serial.println(lastHum);
 
   Serial.print("People      : ");
   Serial.println(confirmedPresence ? "YES" : "NO");
@@ -186,18 +321,19 @@ void loop() {
     HTTPClient http;
 
     http.begin(client, serverUrl);
+    http.setConnectTimeout(3000);
+    http.setTimeout(3000);
 
     http.addHeader("Content-Type", "application/json");
 
     String json = "{";
-    json += "\"temperature\":" + String(temperature, 1) + ",";
-    json += "\"humidity\":" + String(humidity, 1) + ",";
+    json += "\"temperature\":" + String(lastTemp, 1) + ",";
+    json += "\"humidity\":" + String(lastHum, 1) + ",";
     json += "\"peopleDetected\":" + String(confirmedPresence ? "true" : "false") + ",";
     json += "\"distance\":" + String(lastDistance) + ",";
     json += "\"lightRaw\":" + String(lightRaw) + ",";
     json += "\"lightLevel\":" + String(lightLevel) + ",";
-    json += "\"lampStatus\":\"" + String(lampStatus ? "ON" : "OFF") + "\",";
-    json += "\"mode\":\"AUTO\"";
+    json += "\"lampStatus\":\"" + String(lampStatus ? "ON" : "OFF") + "\"";
     json += "}";
 
     Serial.println("Sending JSON:");
@@ -217,6 +353,4 @@ void loop() {
 
     http.end();
   }
-
-  delay(2000);
 }

@@ -76,8 +76,6 @@ app.post('/api/sensors/data', async (req, res) => {
       lightLevel,
       lightStatus,
       lampStatus,
-      mode,
-      brightness,
       deviceId
     } = req.body;
 
@@ -88,8 +86,6 @@ app.post('/api/sensors/data', async (req, res) => {
     if (lightLevel !== undefined) latestState.lightLevel = parseInt(lightLevel, 10);
     if (lightStatus !== undefined) latestState.lightStatus = lightStatus;
     if (lampStatus !== undefined) latestState.lampStatus = lampStatus;
-    if (mode !== undefined) latestState.mode = mode;
-    if (brightness !== undefined) latestState.brightness = parseInt(brightness, 10);
 
     latestState.updatedAt = new Date();
     latestState.source = req.body.source || 'Sensor Telemetry';
@@ -127,6 +123,42 @@ app.post('/api/sensors/data', async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
+});
+
+// Shared mode state for the web dashboard and ESP32 hardware button
+app.get('/api/mode', (req, res) => {
+  res.json({
+    mode: latestState.mode || 'AUTO',
+    brightness: latestState.brightness ?? 100
+  });
+});
+
+app.post('/api/mode', (req, res) => {
+  const { mode } = req.body;
+  const validModes = ['FORCE ON', 'FORCE OFF', 'AUTO'];
+
+  if (!validModes.includes(mode)) {
+    return res.status(400).json({ success: false, error: 'Invalid mode' });
+  }
+
+  latestState.mode = mode;
+  if (mode === 'FORCE ON') latestState.lampStatus = 'ON';
+  if (mode === 'FORCE OFF') latestState.lampStatus = 'OFF';
+  latestState.updatedAt = new Date();
+
+  console.log('MODE UPDATED:', latestState.mode);
+  res.json({ success: true, mode: latestState.mode });
+});
+
+app.post('/api/control/brightness', (req, res) => {
+  const brightness = Number(req.body.brightness);
+  if (!Number.isInteger(brightness) || brightness < 10 || brightness > 100) {
+    return res.status(400).json({ success: false, error: 'Brightness must be an integer from 10 to 100' });
+  }
+
+  latestState.brightness = brightness;
+  latestState.updatedAt = new Date();
+  res.json({ success: true, brightness: latestState.brightness });
 });
 
 // API: Update the current mode
