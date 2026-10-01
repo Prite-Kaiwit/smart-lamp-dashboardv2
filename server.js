@@ -15,7 +15,7 @@ const PUBLIC_URL = process.env.PUBLIC_URL;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // MongoDB Connection
 if (MONGODB_URI) {
@@ -38,8 +38,8 @@ let latestState = {
   lightLevel: null,
   lightStatus: null,
   lampStatus: null,
-  mode: null,
-  brightness: null,
+  mode: 'AUTO',
+  brightness: 100,
   source: null,
   updatedAt: new Date()
 };
@@ -74,7 +74,6 @@ app.post('/api/sensors/data', async (req, res) => {
       peopleDetected,
       lightRaw,
       lightLevel,
-      lightStatus,
       lampStatus,
       deviceId
     } = req.body;
@@ -83,18 +82,14 @@ app.post('/api/sensors/data', async (req, res) => {
     if (humidity !== undefined) latestState.humidity = parseFloat(humidity);
     if (peopleDetected !== undefined) latestState.peopleDetected = Boolean(peopleDetected);
     if (lightRaw !== undefined) latestState.lightRaw = parseInt(lightRaw, 10);
-    if (lightLevel !== undefined) latestState.lightLevel = parseInt(lightLevel, 10);
-    if (lightStatus !== undefined) latestState.lightStatus = lightStatus;
+    if (lightLevel !== undefined) {
+      latestState.lightLevel = parseInt(lightLevel, 10);
+      latestState.lightStatus = latestState.lightLevel < 30 ? 'DARK (มืด)' : 'BRIGHT (สว่าง)';
+    }
     if (lampStatus !== undefined) latestState.lampStatus = lampStatus;
 
     latestState.updatedAt = new Date();
     latestState.source = req.body.source || 'Sensor Telemetry';
-
-    // Auto Mode lamp control logic if in AUTO mode
-    if (latestState.mode === 'AUTO') {
-      const isDark = latestState.lightLevel < 30;
-      latestState.lampStatus = (isDark && latestState.peopleDetected) ? 'ON' : 'OFF';
-    }
 
     // Save to MongoDB Atlas if connected
     let savedLog = null;
@@ -165,6 +160,11 @@ app.post('/api/control/brightness', (req, res) => {
 app.post('/api/control/mode', async (req, res) => {
   try {
     const { mode } = req.body;
+    const validModes = ['FORCE ON', 'FORCE OFF', 'AUTO'];
+
+    if (!validModes.includes(mode)) {
+      return res.status(400).json({ success: false, error: 'Invalid mode' });
+    }
 
     latestState.mode = mode;
     if (mode === 'FORCE ON') latestState.lampStatus = 'ON';
@@ -215,7 +215,7 @@ app.get('/api/sensors/history', async (req, res) => {
 
 // Fallback to index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {

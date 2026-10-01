@@ -2,6 +2,7 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <DHT.h>
+#include <string.h>
 
 // =========================
 // WiFi
@@ -51,6 +52,11 @@ const unsigned long WIFI_RECONNECT_INTERVAL = 10000;
 int currentMode = 0;
 String modeNames[3] = {"AUTO", "FORCE ON", "FORCE OFF"};
 int brightnessPercent = 100;
+bool autoLampOn = false;
+unsigned long lastAutoSwitch = 0;
+const unsigned long MIN_SWITCH_MS = 3000;
+const int DARK_ON_LEVEL = 30;
+const int DARK_OFF_LEVEL = 45;
 
 DHT dht(DHTPIN, DHTTYPE);
 float lastTemp = 0;
@@ -66,6 +72,15 @@ const unsigned long HOLD_TIME = 5000;
 
 int lastDistance = -1;
 
+// Learn repeated range noise while the room is empty.
+const int BIN_CM = 10;
+const int NUM_BINS = 81;
+int noiseHits[NUM_BINS] = {};
+bool noiseMask[NUM_BINS] = {};
+bool calibrating = false;
+unsigned long calibStart = 0;
+const unsigned long CALIB_MS = 60000;
+
 int modeNameToIndex(String name) {
   if (name == "FORCE ON") return 1;
   if (name == "FORCE OFF") return 2;
@@ -75,6 +90,34 @@ int modeNameToIndex(String name) {
 void setLampOutput(bool enabled) {
   const int duty = enabled ? map(brightnessPercent, 0, 100, 0, 255) : 0;
   analogWrite(LEDPIN, duty);
+}
+
+void startCalibration() {
+  memset(noiseHits, 0, sizeof(noiseHits));
+  calibrating = true;
+  calibStart = millis();
+  rawPresence = false;
+  confirmedPresence = false;
+  lastDistance = -1;
+  Serial.println("CALIBRATING: Leave the room empty for 60 seconds");
+}
+
+void finishCalibration() {
+  memset(noiseMask, 0, sizeof(noiseMask));
+  for (int i = 0; i < NUM_BINS; i++) {
+    if (noiseHits[i] >= 2) {
+      for (int j = i - 1; j <= i + 1; j++) {
+        if (j >= 0 && j < NUM_BINS) noiseMask[j] = true;
+      }
+    }
+  }
+  calibrating = false;
+  Serial.println("CALIBRATION DONE");
+}
+
+bool isNoise(int cm) {
+  const int bin = cm / BIN_CM;
+  return bin >= 0 && bin < NUM_BINS && noiseMask[bin];
 }
 
 void fetchModeFromServer() {
@@ -153,6 +196,12 @@ void loop() {
 
   const unsigned long now = millis();
 
+  while (Serial.available()) {
+    if (Serial.read() == 'C') startCalibration();
+  }
+
+  if (calibrating && now - calibStart >= CALIB_MS) finishCalibration();
+
   if (WiFi.status() == WL_CONNECTED) {
     if (lastModeSync == 0) {
       fetchModeFromServer();
@@ -205,21 +254,24 @@ void loop() {
       inputString.trim();
       inputString.toUpperCase();
 
-      if (inputString.indexOf("ON") >= 0) {
-        rawPresence = true;
-        lastONTime = millis();
-      }
-
       if (inputString.indexOf("OFF") >= 0) {
         rawPresence = false;
       }
-
-      if (inputString.indexOf("RANGE") >= 0) {
-
+      else if (inputString.indexOf("RANGE") >= 0) {
         int idx = inputString.indexOf(' ');
-
         if (idx > 0) {
-          lastDistance = inputString.substring(idx + 1).toInt();
+          const int distance = inputString.substring(idx + 1).toInt();
+          if (distance > 0 && distance <= 800) {
+            const int bin = distance / BIN_CM;
+            if (calibrating) {
+              if (bin >= 0 && bin < NUM_BINS) noiseHits[bin]++;
+            }
+            else if (!isNoise(distance)) {
+              rawPresence = true;
+              lastONTime = millis();
+              lastDistance = distance;
+            }
+          }
         }
       }
 
@@ -246,7 +298,6 @@ void loop() {
   // =====================
   int lightRaw = analogRead(LDRPIN);
   int lightLevel = constrain(map(lightRaw, 800, 3800, 100, 0), 0, 100);
-  bool isDark = (lightLevel < 30);
 
   // =====================
   // Lamp Logic (รองรับ 3 โหมด)
@@ -262,14 +313,16 @@ void loop() {
     lampStatus = false;
   }
   else {                               // AUTO
-    if (isDark && confirmedPresence) {
-      setLampOutput(true);
-      lampStatus = true;
+    bool want = autoLampOn;
+    if (!autoLampOn && lightLevel < DARK_ON_LEVEL && confirmedPresence) want = true;
+    if (autoLampOn && (!confirmedPresence || lightLevel > DARK_OFF_LEVEL)) want = false;
+
+    if (want != autoLampOn && millis() - lastAutoSwitch > MIN_SWITCH_MS) {
+      autoLampOn = want;
+      lastAutoSwitch = millis();
     }
-    else {
-      setLampOutput(false);
-      lampStatus = false;
-    }
+    setLampOutput(autoLampOn);
+    lampStatus = autoLampOn;
   }
 
   if (millis() - lastTelemetry < TELEMETRY_INTERVAL) return;

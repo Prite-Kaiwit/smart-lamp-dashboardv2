@@ -31,6 +31,7 @@ let telemetryChartInstance = null;
 let activeChartTab = 'all';
 let syncTimer = null;
 let brightnessTimer = null;
+let lastBrightnessEdit = 0;
 let isHistoryLoaded = false;
 
 // Web Serial API states (Direct USB connection)
@@ -131,7 +132,8 @@ function updateDashboard(data) {
       state.lightStatus = data.lightStatus;
       state.lampStatus = data.lampStatus;
       state.mode = data.mode;
-      if (data.brightness != null && Number.isFinite(Number(data.brightness))) {
+      if (data.brightness != null && Number.isFinite(Number(data.brightness)) &&
+          Date.now() - lastBrightnessEdit > 2500) {
         state.brightness = Number(data.brightness);
       }
       state.mongoConnected = true;
@@ -396,6 +398,7 @@ function toggleLampManual() {
 }
 
 function changeBrightness(value) {
+  lastBrightnessEdit = Date.now();
   state.brightness = parseInt(value, 10);
   const elem = document.getElementById('brightnessValue');
   if (elem) elem.textContent = `${state.brightness}%`;

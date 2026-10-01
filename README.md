@@ -54,12 +54,12 @@ Mode        : FORCE ON
 ## 🚀 วิธีเปิดใช้งานหน้าเว็บแดชบอร์ดทันที:
 
 คุณสามารถเปิดไฟล์หน้าเว็บได้ทันทีโดยไม่ต้องรันเซิร์ฟเวอร์:
-1. เปิดโฟลเดอร์ `C:\Users\kaiwi\smart-lamp-dashboard`
+1. เปิดโฟลเดอร์ `C:\Users\kaiwi\smart-lamp-dashboard\public`
 2. ดับเบิลคลิกไฟล์ **`index.html`** เพื่อเปิดบน Google Chrome / Microsoft Edge / Brave ได้ทันที!
 
 หรือเปิดผ่านเบราว์เซอร์จากคำสั่ง:
 ```powershell
-Start-Process "C:\Users\kaiwi\smart-lamp-dashboard\index.html"
+Start-Process "C:\Users\kaiwi\smart-lamp-dashboard\public\index.html"
 ```
 
 ---
@@ -80,12 +80,13 @@ node server.js
 ```
 - เซิร์ฟเวอร์จะรันที่พอร์ต 5000 ในเครื่อง หรือใช้ URL สาธารณะเมื่อ deploy
 - เชื่อมต่อกับ MongoDB ผ่านค่า `MONGODB_URI`
-- Frontend อ่าน URL ของ Backend จาก `config.js`
+- Frontend อ่าน URL ของ Backend จาก `public/config.js`
 
 ### 3. โครงสร้างไฟล์ในโปรเจกต์:
-- **`index.html`** : หน้าเว็บแดชบอร์ดหลัก
-- **`styles.css`** : การตกแต่งสีโทนอุ่นและเอฟเฟกต์ไฟเรืองแสง
-- **`app.js`** : ระบบ Logic ทำงานจริง กราฟ คอนโซล และการคำนวณเซ็นเซอร์
+- **`public/index.html`** : หน้าเว็บแดชบอร์ดหลัก
+- **`public/styles.css`** : การตกแต่งสีโทนอุ่นและเอฟเฟกต์ไฟเรืองแสง
+- **`public/app.js`** : ระบบ Logic ทำงานจริง กราฟ คอนโซล และการคำนวณเซ็นเซอร์
+- **`public/config.js`** : URL ของ Backend สำหรับหน้าเว็บ
 - **`server.js`** : API Backend Express + MongoDB
 - **`models/SensorLog.js`** : โมเดลตารางข้อมูล Mongoose Schema
 - **`arduino_sample.ino`** : ตัวอย่างโค้ด ESP32 ส่งข้อมูลเซ็นเซอร์เข้า MongoDB
@@ -105,8 +106,8 @@ node server.js
 
 ### Vercel (Frontend)
 
-- Deploy ไฟล์ static ในโฟลเดอร์นี้
-- แก้ `BACKEND_URL` ใน `config.js` เป็น URL จริงของ Render
+- Deploy ไฟล์ static ในโฟลเดอร์ `public/`
+- แก้ `BACKEND_URL` ใน `public/config.js` เป็น URL จริงของ Render
 - ตรวจว่า `config.js` ถูกโหลดก่อน `app.js`
 - เปิดหน้า Vercel แล้วตรวจ Browser Console ว่ามีข้อมูลจาก `/api/sensors/latest`
 - ตรวจ CORS และทดสอบว่าค่า `temperature`, `humidity`, `peopleDetected`, `lightRaw`, `lightLevel`, `lampStatus` และ `mode` แสดงจาก API
