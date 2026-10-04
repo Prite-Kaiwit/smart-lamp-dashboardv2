@@ -2,6 +2,121 @@
    LumiTrack Smart Lamp & Ambience IoT Dashboard - Warm Palette Styles
    ========================================================================== */
 
+body {
+  isolation: isolate;
+  --dashboard-grid-line: rgba(245, 158, 11, 0.035);
+  background-image:
+    linear-gradient(132deg, rgba(217, 119, 6, 0.07), transparent 34%, transparent 72%, rgba(16, 185, 129, 0.025)),
+    linear-gradient(var(--dashboard-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--dashboard-grid-line) 1px, transparent 1px);
+  background-size: 100% 100%, 56px 56px, 56px 56px;
+  background-position: center, top left, top left;
+  background-repeat: no-repeat, repeat, repeat;
+  background-attachment: fixed;
+}
+
+.ambient-field {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+body > #alertBanner,
+body > main {
+  position: relative;
+  z-index: 1;
+}
+
+.ambient-node {
+  --node-opacity: 0.42;
+  --node-drift: 6px;
+  position: absolute;
+  top: 110%;
+  left: 1.5%;
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(245, 158, 11, 0.48);
+  border-radius: 2px;
+  opacity: 0;
+  animation: ambientFloat 38s linear infinite;
+}
+
+.ambient-node:nth-child(2) {
+  left: 33%;
+  width: 7px;
+  height: 7px;
+  --node-drift: -5px;
+  animation-duration: 43s;
+  animation-delay: -27s;
+  border-color: rgba(16, 185, 129, 0.42);
+}
+
+.ambient-node:nth-child(3) {
+  left: 65%;
+  --node-drift: 6px;
+  animation-duration: 46s;
+  animation-delay: -15s;
+}
+
+.ambient-node:nth-child(4) {
+  left: 98%;
+  width: 8px;
+  height: 8px;
+  --node-drift: -6px;
+  animation-duration: 40s;
+  animation-delay: -32s;
+  border-color: rgba(16, 185, 129, 0.42);
+}
+
+.ambient-node:nth-child(5) {
+  left: 33%;
+  --node-drift: 5px;
+  animation-duration: 49s;
+  animation-delay: -21s;
+}
+
+.ambient-node:nth-child(6) {
+  left: 65%;
+  width: 7px;
+  height: 7px;
+  --node-drift: -6px;
+  animation-duration: 45s;
+  animation-delay: -36s;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+@media (max-width: 1023px) {
+  .ambient-node:nth-child(n + 3) {
+    display: none;
+  }
+
+  .ambient-node:nth-child(1) {
+    left: 1.5%;
+    --node-drift: 0px;
+  }
+
+  .ambient-node:nth-child(2) {
+    left: 98%;
+    --node-drift: 0px;
+  }
+}
+
+@keyframes ambientFloat {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(45deg);
+  }
+  14%, 82% {
+    opacity: var(--node-opacity);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--node-drift), -125vh, 0) rotate(405deg);
+  }
+}
+
 /* Custom Scrollbar for Terminal & Tables */
 .scrollbar-thin::-webkit-scrollbar {
   width: 6px;
@@ -144,46 +259,209 @@
   }
 }
 
-/* Light Mode Overrides for Warm Cozy Vibe */
+/* Light mode overrides */
 body.light-mode {
-  background-color: #FAF5EE !important;
-  color: #2D241E !important;
+  --light-ink: #34291F;
+  --light-muted: #66574A;
+  --light-surface: #FFFFFF;
+  --light-panel: #F5EFE6;
+  --light-border: #DED1C1;
+  --dashboard-grid-line: rgba(103, 77, 51, 0.055);
+  background-image:
+    linear-gradient(132deg, rgba(217, 119, 6, 0.055), transparent 34%, transparent 72%, rgba(16, 120, 78, 0.035)),
+    linear-gradient(var(--dashboard-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--dashboard-grid-line) 1px, transparent 1px);
+  background-color: #F2EEE7 !important;
+  color: var(--light-ink) !important;
+}
+
+body.light-mode .ambient-node {
+  --node-opacity: 0.34;
+  border-color: rgba(154, 90, 30, 0.42);
+}
+
+body.light-mode .ambient-node:nth-child(even) {
+  border-color: rgba(22, 99, 62, 0.34);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-node {
+    display: none;
+  }
 }
 
 body.light-mode header {
-  background-color: rgba(250, 245, 238, 0.85) !important;
-  border-color: #E8DED3 !important;
+  background-color: rgba(250, 247, 241, 0.97) !important;
+  border-color: var(--light-border) !important;
+  box-shadow: 0 1px 8px rgba(66, 48, 31, 0.06);
 }
 
-body.light-mode header h1 {
-  color: #261B11 !important;
+body.light-mode h1,
+body.light-mode h2,
+body.light-mode h3,
+body.light-mode .text-white {
+  color: var(--light-ink) !important;
 }
 
 body.light-mode .bg-\[\#1D1916\] {
-  background-color: #FFFFFF !important;
-  border-color: #EBDDCC !important;
-  box-shadow: 0 10px 25px -5px rgba(180, 115, 60, 0.08) !important;
+  background-color: var(--light-surface) !important;
+  border-color: var(--light-border) !important;
+  box-shadow: 0 5px 16px rgba(66, 48, 31, 0.07) !important;
 }
 
 body.light-mode .bg-\[\#161311\],
 body.light-mode .bg-\[\#171412\],
-body.light-mode .bg-\[\#141210\] {
-  background-color: #F8F1E7 !important;
-  border-color: #E5D5C2 !important;
+body.light-mode .bg-\[\#141210\],
+body.light-mode .bg-\[\#221C17\],
+body.light-mode .bg-\[\#261F19\],
+body.light-mode .bg-\[\#2C241E\],
+body.light-mode .bg-\[\#2F251E\],
+body.light-mode .bg-\[\#2B221B\],
+body.light-mode .bg-stone-800,
+body.light-mode .bg-stone-900 {
+  background-color: var(--light-panel) !important;
+  border-color: var(--light-border) !important;
 }
 
-body.light-mode .text-white {
-  color: #2B1D12 !important;
+body.light-mode [class*="bg-amber-950"] {
+  background-color: #FFF3DE !important;
+  border-color: #E4C796 !important;
+}
+
+body.light-mode [class*="bg-emerald-950"] {
+  background-color: #E8F5EC !important;
+  border-color: #ADD0B7 !important;
+}
+
+body.light-mode [class*="bg-orange-950"] {
+  background-color: #FCEDE5 !important;
+  border-color: #E5BCA8 !important;
 }
 
 body.light-mode .text-stone-300,
-body.light-mode .text-stone-400 {
-  color: #6B5B4E !important;
+body.light-mode .text-stone-400,
+body.light-mode .text-stone-500,
+body.light-mode .text-stone-600 {
+  color: var(--light-muted) !important;
+}
+
+body.light-mode .text-stone-200 {
+  color: #514338 !important;
+}
+
+body.light-mode .text-amber-200,
+body.light-mode .text-amber-300,
+body.light-mode .text-amber-400,
+body.light-mode .text-amber-500,
+body.light-mode [class~="text-amber-300/90"] {
+  color: #8A4B08 !important;
+}
+
+body.light-mode .text-emerald-400 {
+  color: #17633E !important;
+}
+
+body.light-mode .text-orange-300,
+body.light-mode .text-orange-400,
+body.light-mode .text-rose-400 {
+  color: #A23B1A !important;
+}
+
+body.light-mode .text-sky-300 {
+  color: #075985 !important;
+}
+
+body.light-mode .text-yellow-300 {
+  color: #8A4B08 !important;
+}
+
+body.light-mode.lamp-off #lampBulbBody {
+  background: radial-gradient(circle at 50% 38%, #FFFDF8 0%, #EFE6D9 58%, #D9C9B5 100%);
+  box-shadow: 0 8px 22px rgba(66, 48, 31, 0.2), inset 0 2px 7px rgba(255, 255, 255, 0.9);
+  border-color: #B9A58B;
+}
+
+body.light-mode.lamp-off #filament {
+  border-color: #B8894D;
+  background: rgba(173, 129, 70, 0.08);
+}
+
+body.light-mode.lamp-off #filament svg {
+  color: #76624A;
+  fill: #C2AD8D !important;
+  filter: none;
+}
+
+body.light-mode.lamp-off #lampReflection {
+  opacity: 0.28;
+  background: radial-gradient(ellipse at center, rgba(137, 111, 78, 0.34) 0%, rgba(137, 111, 78, 0.08) 65%, transparent 100%);
+}
+
+body.light-mode header button {
+  background-color: #FFFCF7 !important;
+  border-color: var(--light-border) !important;
+  color: var(--light-muted) !important;
+}
+
+body.light-mode header button:hover {
+  background-color: #F3E9DA !important;
+}
+
+body.light-mode #btnConnectSerial,
+body.light-mode #toggleSimBtn {
+  background-color: #FFF3DE !important;
+  border-color: #D6A15B !important;
+  color: #75410B !important;
+}
+
+body.light-mode button[class*="bg-amber-500/20"] {
+  background-color: #FFF0D6 !important;
+  border-color: #B86A18 !important;
+  color: #75410B !important;
+}
+
+body.light-mode #lampBadgeStatus[class~="bg-emerald-950/80"] {
+  background-color: #E8F5EC !important;
+  border-color: #ADD0B7 !important;
+  color: #17633E !important;
+}
+
+body.light-mode #lampBadgeStatus[class~="bg-stone-800"] {
+  background-color: #F0EBE4 !important;
+  border-color: #D8CABB !important;
+  color: #66574A !important;
+}
+
+body.light-mode #mongoTableBody tr:hover {
+  background-color: #F2E7D7 !important;
 }
 
 body.light-mode #terminalLogs {
-  background-color: #12100E;
-  color: #E2D9D0;
+  background-color: #FFFCF7 !important;
+  border-color: var(--light-border) !important;
+  color: #3E342C !important;
+}
+
+body.light-mode #terminalWindow {
+  background-color: #FFFCF7 !important;
+  border-color: var(--light-border) !important;
+  box-shadow: 0 3px 12px rgba(66, 48, 31, 0.08) !important;
+}
+
+body.light-mode #terminalWindow > div:first-child {
+  border-color: var(--light-border) !important;
+}
+
+body.light-mode .scrollbar-thin::-webkit-scrollbar-track {
+  background: #F0E9DF;
+}
+
+body.light-mode .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #C8B59C;
+}
+
+body.light-mode .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #9C7950;
 }
 
 /* Custom fade animation */

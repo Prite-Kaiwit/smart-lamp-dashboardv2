@@ -70,6 +70,15 @@
 </head>
 <body class="bg-[#141210] text-[#F5EDE4] min-h-screen font-sans transition-colors duration-300 antialiased selection:bg-amber-500 selection:text-black">
 
+  <div class="ambient-field" aria-hidden="true">
+    <span class="ambient-node"></span>
+    <span class="ambient-node"></span>
+    <span class="ambient-node"></span>
+    <span class="ambient-node"></span>
+    <span class="ambient-node"></span>
+    <span class="ambient-node"></span>
+  </div>
+
   <!-- TOP NOTIFICATION BANNER -->
   <div id="alertBanner" class="hidden bg-gradient-to-r from-amber-900/90 to-orange-950/90 border-b border-amber-600/40 text-amber-200 px-4 py-2.5 text-xs md:text-sm flex items-center justify-between transition-all duration-300">
     <div class="flex items-center space-x-2 max-w-5xl mx-auto w-full justify-between">
@@ -258,7 +267,7 @@
               <div class="w-14 h-4 bg-gradient-to-r from-stone-700 via-amber-800 to-stone-700 mx-auto rounded-t-lg border-t border-amber-600/50"></div>
               
               <!-- Bulb Glass Body -->
-              <div id="lampBulbBody" class="w-32 h-32 rounded-full relative flex items-center justify-center transition-all duration-500 bg-gradient-to-b from-amber-400 via-amber-300 to-yellow-100 shadow-warm-glow-lg border-2 border-amber-300">
+              <div id="lampBulbBody" class="w-32 h-32 mx-auto rounded-full relative flex items-center justify-center transition-all duration-500 bg-gradient-to-b from-amber-400 via-amber-300 to-yellow-100 shadow-warm-glow-lg border-2 border-amber-300">
                 <!-- Filament glow -->
                 <div id="filament" class="w-12 h-12 rounded-full border-2 border-amber-600 flex items-center justify-center transition-all duration-300">
                   <i data-lucide="lightbulb" class="w-14 h-14 text-amber-800 fill-amber-300"></i>
@@ -526,7 +535,7 @@
           </div>
 
           <!-- Raw Console Window -->
-          <div class="mt-3 bg-[#0E1318] border border-[#202933] rounded-2xl p-3.5 font-mono text-xs overflow-hidden shadow-inner flex flex-col h-[380px]">
+          <div id="terminalWindow" class="mt-3 bg-[#0E1318] border border-[#202933] rounded-2xl p-3.5 font-mono text-xs overflow-hidden shadow-inner flex flex-col h-[380px]">
             <!-- Terminal Header Bar -->
             <div class="flex items-center justify-between text-[11px] text-stone-400 pb-2 border-b border-stone-800/80 mb-2">
               <span class="flex items-center gap-1.5">
