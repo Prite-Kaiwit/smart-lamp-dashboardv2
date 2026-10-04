@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Lamp & Ambience IoT Dashboard | ระบบไฟอัจฉริยะ</title>
+  <title>Smart Classroom | Smart Lamp Dashboard</title>
   
   <!-- Google Fonts: Prompt & Kanit & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -99,7 +99,7 @@
         <div>
           <div class="flex items-center space-x-2">
             <h1 class="text-lg md:text-xl font-bold tracking-tight text-white flex items-center gap-2">
-              LumiTrack <span class="text-amber-400 font-light text-sm px-2 py-0.5 rounded-md bg-amber-950/60 border border-amber-600/40">IoT v1.0</span>
+              Smart Classroom <span class="text-amber-400 font-light text-sm px-2 py-0.5 rounded-md bg-amber-950/60 border border-amber-600/40">IoT v1.0</span>
             </h1>
           </div>
           <p class="text-xs text-[#A89A8E] flex items-center gap-1.5 mt-0.5">
@@ -281,9 +281,9 @@
               <span class="text-sm font-medium text-stone-200 flex items-center gap-2">
                 <i data-lucide="power" class="w-4 h-4 text-amber-400"></i> สวิตช์ไฟหลัก
               </span>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" id="lampToggleSwitch" checked onchange="handleLampSwitch(this.checked)" class="sr-only peer">
-                <div class="w-13 h-7 bg-stone-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-amber-500 peer-checked:to-orange-500 shadow-inner"></div>
+              <label class="lamp-toggle">
+                <input type="checkbox" id="lampToggleSwitch" checked onchange="handleLampSwitch(this.checked)" aria-label="สวิตช์ไฟหลัก">
+                <span class="lamp-toggle-track" aria-hidden="true"></span>
               </label>
             </div>
 
@@ -747,7 +747,7 @@
   <!-- FOOTER -->
   <footer class="border-t border-[#292019] mt-12 py-6 text-center text-xs text-[#8A7B6E]">
     <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-      <p>© 2026 LumiTrack IoT System • พัฒนาระบบแสดงผลแดชบอร์ดตามบันทึกฮาร์ดแวร์จริง</p>
+      <p>© 2026 Smart Classroom • พัฒนาระบบแสดงผลแดชบอร์ดตามบันทึกฮาร์ดแวร์จริง</p>
       <div class="flex items-center space-x-3 text-stone-400">
         <span>Arduino / ESP32</span>
         <span>•</span>
