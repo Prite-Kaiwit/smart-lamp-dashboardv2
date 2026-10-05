@@ -11,6 +11,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI;
 const PUBLIC_URL = process.env.PUBLIC_URL;
+const DEVICE_OFFLINE_TIMEOUT_MS = 10000;
 
 // Middleware
 app.use(cors());
@@ -41,6 +42,7 @@ let latestState = {
   mode: 'AUTO',
   brightness: 100,
   source: null,
+  lastTelemetryAt: null,
   updatedAt: new Date()
 };
 
@@ -60,7 +62,11 @@ app.get('/api/status', (req, res) => {
 app.get('/api/sensors/latest', (req, res) => {
   res.json({
     success: true,
-    data: latestState
+    data: {
+      ...latestState,
+      deviceOnline: latestState.lastTelemetryAt !== null &&
+        Date.now() - latestState.lastTelemetryAt.getTime() <= DEVICE_OFFLINE_TIMEOUT_MS
+    }
   });
 });
 
@@ -89,6 +95,7 @@ app.post('/api/sensors/data', async (req, res) => {
     if (lampStatus !== undefined) latestState.lampStatus = lampStatus;
 
     latestState.updatedAt = new Date();
+    latestState.lastTelemetryAt = latestState.updatedAt;
     latestState.source = req.body.source || 'Sensor Telemetry';
 
     // Save to MongoDB Atlas if connected

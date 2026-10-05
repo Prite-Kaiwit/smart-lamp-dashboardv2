@@ -56,6 +56,8 @@ function getTimestamp() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  updateDeviceStatus(null);
+
   const simBtnText = document.getElementById('simBtnText');
   if (simBtnText) simBtnText.textContent = '🟢 ดึงข้อมูลสดจากระบบ';
   const simDot = document.getElementById('simDot');
@@ -118,12 +120,49 @@ async function fetchLiveHardwareData() {
     console.log(data);
     updateDashboard(data);
   } catch (err) {
+    updateDeviceStatus(null);
     console.error('Error fetching live data:', err);
+  }
+}
+
+function updateDeviceStatus(isOnline) {
+  const button = document.getElementById('deviceStatusButton');
+  const dot = document.getElementById('deviceStatusDot');
+  const text = document.getElementById('deviceStatusText');
+  const logoDot = document.getElementById('deviceStatusLogoDot');
+  const logoPing = document.getElementById('deviceStatusPing');
+  if (!button || !dot || !text) return;
+
+  if (isOnline === true) {
+    button.className = 'flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-emerald-600/50 bg-emerald-950/50 text-emerald-300 transition';
+    button.title = 'ESP32 ส่งข้อมูลภายใน 10 วินาทีล่าสุด';
+    button.setAttribute('aria-label', 'ESP32 ออนไลน์');
+    dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+    text.textContent = 'ออนไลน์';
+    if (logoDot) logoDot.className = 'relative inline-flex rounded-full h-3 w-3 bg-emerald-500';
+    if (logoPing) logoPing.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
+  } else if (isOnline === false) {
+    button.className = 'flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-red-600/50 bg-red-950/40 text-red-300 transition';
+    button.title = 'ไม่มีข้อมูลจาก ESP32 เกิน 10 วินาที';
+    button.setAttribute('aria-label', 'ESP32 ออฟไลน์');
+    dot.className = 'w-2 h-2 rounded-full bg-red-400';
+    text.textContent = 'ออฟไลน์';
+    if (logoDot) logoDot.className = 'relative inline-flex rounded-full h-3 w-3 bg-red-500';
+    if (logoPing) logoPing.className = 'hidden';
+  } else {
+    button.className = 'flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-stone-600/50 bg-stone-900/50 text-stone-300 transition';
+    button.title = 'ไม่สามารถตรวจสอบสถานะ ESP32 ได้';
+    button.setAttribute('aria-label', 'ตรวจสอบสถานะ ESP32 ไม่ได้');
+    dot.className = 'w-2 h-2 rounded-full bg-stone-400';
+    text.textContent = 'ตรวจสอบไม่ได้';
+    if (logoDot) logoDot.className = 'relative inline-flex rounded-full h-3 w-3 bg-stone-500';
+    if (logoPing) logoPing.className = 'hidden';
   }
 }
 
 function updateDashboard(data) {
   if (data) {
+      updateDeviceStatus(typeof data.deviceOnline === 'boolean' ? data.deviceOnline : null);
       state.temperature = data.temperature;
       state.humidity = data.humidity;
       state.hasPeople = data.peopleDetected;
